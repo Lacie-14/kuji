@@ -1,153 +1,243 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>制限付きくじ引き</title>
-    <style>
-        /* 基本スタイル設定 */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f7f7f7;
-            text-align: center;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>くじ引き</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      max-width: 360px;
+      margin: auto;
+      padding: 10px;
+      background-color: #f4f9ff;
+      position: relative;
+    }
 
-        .container {
-            width: 100%;
-            max-width: 600px;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
+    #inputArea {
+      width: 100%;
+      height: 200px;
+      padding: 6px;
+      font-size: 13px;
+      box-sizing: border-box;
+      border: 1px dashed #ccc;
+      background-color: #ffffff;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
 
-        h1 {
-            font-size: 1.5rem;
-            color: #333;
-            margin-bottom: 20px;
-        }
+    .corner-buttons {
+      position: absolute;
+      top: 5px;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 5px;
+      z-index: 1;
+    }
 
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 15px 32px;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
+    .corner-buttons button {
+      font-size: 11px;
+      padding: 3px 6px;
+      margin-left: 4px;
+    }
 
-        button:hover {
-            background-color: #45a049;
-        }
+    #drawSection {
+      margin-top: 20px;
+      display: none;
+      text-align: center;
+    }
 
-        #result {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            color: #333;
-            font-weight: bold;
-        }
+    #drawButton {
+      font-size: 18px;
+      padding: 12px 24px;
+      margin-top: 12px;
+      background-color: #007acc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
 
-        .list-container {
-            margin-top: 20px;
-            text-align: left;
-        }
+    #result {
+      font-size: 18px;
+      font-weight: bold;
+      color: #007acc;
+      margin-bottom: 8px;
+    }
 
-        .list-item {
-            border-bottom: 1px dashed #ccc;
-            padding: 8px 0;
-            font-size: 1rem;
-        }
+    #history {
+      font-size: 12px;
+      margin-top: 15px;
+      color: #333;
+      border-top: 1px dashed #aaa;
+      padding-top: 8px;
+      text-align: left;
+    }
 
-        .list-item:last-child {
-            border-bottom: none;
-        }
-    </style>
+    #backButton {
+      display: none;
+      font-size: 11px;
+      padding: 4px 8px;
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      z-index: 2;
+    }
+
+    #previewArea {
+      margin-top: 10px;
+      border: 1px dashed #aaa;
+      background-color: #fefefe;
+      padding: 6px;
+      display: none;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    #previewArea ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>制限付きくじ引き</h1>
+  <h2>くじ引き</h2>
 
-        <button id="drawButton">くじを引く</button>
-        <p id="result"></p>
-
-        <div class="list-container" id="listContainer">
-            <h3>登録した例文:</h3>
-            <div id="list">
-                <!-- 例文リスト -->
-            </div>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <button id="clearButton">登録内容を消去する</button>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <button id="addExampleButton">例文を追加する</button>
-        </div>
+  <div class="corner-buttons">
+    <div>
+      <button onclick="saveExamples()">保存</button>
+      <button onclick="loadExamples()">読み込み</button>
+      <button onclick="previewExamples()">プレビュー</button>
+      <button onclick="deleteExamples()">削除</button>
     </div>
+    <div>
+      <button onclick="confirmExamples()">確定</button>
+    </div>
+  </div>
 
-    <script>
-        // 例文リストの配列
-        let examples = [];
+  <textarea id="inputArea" placeholder="1行に1つ、最大30個まで入力してください。"></textarea>
 
-        // ボタンと表示エレメントの取得
-        const drawButton = document.getElementById('drawButton'); // くじ引きボタン
-        const resultElement = document.getElementById('result'); // 結果表示エリア
-        const listContainer = document.getElementById('listContainer'); // 例文リストコンテナ
-        const addExampleButton = document.getElementById('addExampleButton'); // 例文追加ボタン
-        const clearButton = document.getElementById('clearButton'); // 登録内容削除ボタン
+  <div id="previewArea"></div>
 
-        // 例文を追加する関数
-        function addExample() {
-            const newExample = prompt('例文を入力してください:'); // ユーザーに例文を入力させる
-            if (newExample) {
-                examples.push(newExample); // 例文を配列に追加
-                updateExampleList(); // 例文リストを更新
-            }
-        }
+  <div id="drawSection">
+    <div id="result">ここに結果が表示されます</div>
+    <button id="drawButton" onclick="drawExample()">くじを引く！</button>
+    <div id="history">
+      <strong>履歴:</strong>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
 
-        // 例文リストを更新する関数
-        function updateExampleList() {
-            const listDiv = document.getElementById('list'); // リストを表示する要素を取得
-            listDiv.innerHTML = ''; // 既存のリストをクリア
-            examples.forEach((example, index) => {
-                const listItem = document.createElement('div'); // 新しいリスト項目を作成
-                listItem.classList.add('list-item'); // CSSクラスを追加
-                listItem.textContent = `${index + 1}. ${example}`; // 番号と例文を表示
-                listDiv.appendChild(listItem); // リストに追加
-            });
-        }
+  <button id="backButton" onclick="goBack()">戻る</button>
 
-        // くじを引くボタンのクリックイベント
-        drawButton.addEventListener('click', () => {
-            if (examples.length === 0) {
-                resultElement.textContent = '例文を追加してください。'; // 例文がない場合、警告メッセージ
-            } else {
-                const randomIndex = Math.floor(Math.random() * examples.length); // ランダムに例文を選ぶ
-                const selectedExample = examples[randomIndex]; // 選ばれた例文
-                resultElement.textContent = `選ばれた例文: ${selectedExample}`; // 結果を表示
-            }
-        });
+  <script>
+    let confirmedExamples = [];
+    let drawHistory = [];
 
-        // 登録内容を削除するボタンのクリックイベント
-        clearButton.addEventListener('click', () => {
-            if (confirm('本当に登録内容を削除しますか？')) { // 削除の確認ダイアログ
-                examples = []; // 例文リストを空にする
-                updateExampleList(); // リストを更新
-                resultElement.textContent = ''; // 結果表示エリアをクリア
-            }
-        });
+    function getValidLines() {
+      const raw = document.getElementById("inputArea").value.trim();
+      return raw.split("\n").map(line => line.trim()).filter(line => line).slice(0, 30);
+    }
 
-        // 例文追加ボタンのクリックイベント
-        addExampleButton.addEventListener('click', addExample); // 例文追加関数を呼び出す
-    </script>
+    function previewExamples() {
+      const lines = getValidLines();
+      const preview = document.getElementById("previewArea");
+      if (lines.length === 0) {
+        preview.style.display = "none";
+        alert("プレビューする例文がありません。");
+        return;
+      }
+      preview.innerHTML = "<strong>入力された例文:</strong><ul>" +
+        lines.map((line, idx) => `<li>${idx + 1}. ${line}</li>`).join("") +
+        "</ul>";
+      preview.style.display = "block";
+    }
+
+    function confirmExamples() {
+      const lines = getValidLines();
+      if (lines.length === 0) {
+        alert("少なくとも1つの例文を入力してください。");
+        return;
+      }
+      confirmedExamples = lines;
+      document.getElementById("inputArea").disabled = true;
+      document.querySelector('.corner-buttons').style.display = "none";
+      document.getElementById("drawSection").style.display = "block";
+      document.getElementById("backButton").style.display = "inline-block";
+      document.getElementById("previewArea").style.display = "none";
+    }
+
+    function drawExample() {
+      if (confirmedExamples.length === 0) return;
+      const index = Math.floor(Math.random() * confirmedExamples.length);
+      const result = confirmedExamples[index];
+      document.getElementById("result").innerText = `当選: ${result}`;
+      drawHistory.unshift(result);
+      updateHistory();
+    }
+
+    function updateHistory() {
+      const list = document.getElementById("historyList");
+      list.innerHTML = drawHistory.slice(0, 10).map((item) => `<li>${item}</li>`).join("");
+    }
+
+    function goBack() {
+      document.getElementById("inputArea").disabled = false;
+      document.getElementById("drawSection").style.display = "none";
+      document.querySelector('.corner-buttons').style.display = "flex";
+      document.getElementById("backButton").style.display = "none";
+    }
+
+    function saveExamples() {
+      const lines = getValidLines();
+      localStorage.setItem("examples", JSON.stringify(lines));
+      localStorage.setItem("history", JSON.stringify(drawHistory));
+      alert("保存しました。");
+    }
+
+    function loadExamples() {
+      const saved = localStorage.getItem("examples");
+      const savedHistory = localStorage.getItem("history");
+      if (!saved) {
+        alert("保存された例文がありません。");
+        return;
+      }
+      const lines = JSON.parse(saved);
+      document.getElementById("inputArea").value = lines.join("\n");
+      drawHistory = savedHistory ? JSON.parse(savedHistory) : [];
+      updateHistory();
+      alert("読み込みました。");
+    }
+
+    function deleteExamples() {
+      if (confirm("保存された例文と履歴を本当に削除しますか？")) {
+        localStorage.removeItem("examples");
+        localStorage.removeItem("history");
+
+        // 画面もリセット
+        document.getElementById("inputArea").value = "";
+        document.getElementById("previewArea").innerHTML = "";
+        document.getElementById("previewArea").style.display = "none";
+        document.getElementById("result").innerText = "ここに結果が表示されます";
+        document.getElementById("historyList").innerHTML = "";
+
+        confirmedExamples = [];
+        drawHistory = [];
+
+        document.getElementById("inputArea").disabled = false;
+        document.getElementById("drawSection").style.display = "none";
+        document.querySelector('.corner-buttons').style.display = "flex";
+        document.getElementById("backButton").style.display = "none";
+
+        alert("保存データと画面内容をすべて削除しました。");
+      }
+    }
+  </script>
 </body>
 </html>

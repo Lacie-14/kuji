@@ -1,200 +1,184 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>くじ引き</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>くじ引きアプリ</title>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      max-width: 360px;
-      margin: auto;
+      font-family: sans-serif;
+      margin: 0;
       padding: 10px;
-      background-color: #f4f9ff;
-      position: relative;
+      background: #f5f5f5;
+      box-sizing: border-box;
     }
-    #inputArea {
+    h1 {
+      font-size: 20px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    textarea {
       width: 100%;
       height: 200px;
-      padding: 6px;
-      font-size: 13px;
+      font-size: 14px;
+      padding: 8px;
       box-sizing: border-box;
-      border: 1px dashed #ccc;
-      background-color: #ffffff;
-      white-space: pre-wrap;
-      line-height: 1.4;
+      resize: none;
     }
     .corner-buttons {
-      position: absolute;
-      top: 5px;
       display: flex;
       justify-content: space-between;
-      width: 100%;
-      padding: 0 5px;
-      z-index: 1;
+      margin-bottom: 10px;
     }
     .corner-buttons button {
-      font-size: 11px;
-      padding: 3px 6px;
-      margin-left: 4px;
+      font-size: 12px;
+      padding: 6px 10px;
     }
-    #drawSection {
-      margin-top: 20px;
-      display: none;
+    .draw-section {
       text-align: center;
+      margin-top: 20px;
     }
-    #drawButton {
-      font-size: 18px;
-      padding: 12px 24px;
-      margin-top: 12px;
-      background-color: #007acc;
+    .draw-button {
+      font-size: 24px;
+      padding: 10px 30px;
+      margin-top: 10px;
+      background-color: #4CAF50;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
     }
-    #result {
-      font-size: 18px;
+    .drawn-result {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #d32f2f;
       font-weight: bold;
-      color: #007acc;
-      margin-bottom: 8px;
     }
-    #history {
-      font-size: 12px;
-      margin-top: 15px;
-      color: #333;
-      border-top: 1px dashed #aaa;
-      padding-top: 8px;
-      text-align: left;
+    .dotted {
+      border-top: 1px dotted #aaa;
+      margin: 5px 0;
     }
-    #backButton {
-      display: none;
-      font-size: 11px;
-      padding: 4px 8px;
-      position: absolute;
-      top: 5px;
-      left: 5px;
-      z-index: 2;
-    }
-    #previewArea {
+    .preview, .history {
+      font-size: 14px;
+      background: white;
+      padding: 10px;
       margin-top: 10px;
-      border: 1px dashed #aaa;
-      background-color: #fefefe;
-      padding: 6px;
+      border-radius: 4px;
+    }
+    .hidden {
       display: none;
-      font-size: 12px;
-      text-align: left;
-    }
-    #previewArea ul {
-      padding-left: 18px;
-      margin: 0;
-    }
-    h2 {
-      font-size: 18px;
-      text-align: center;
-      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
-  <h2>くじ引きアプリ</h2>
 
-  <!-- 入力エリア：ここにくじの内容を入力します -->
-  <textarea id="inputArea" placeholder="ここにくじの内容を入力..."></textarea>
+  <h1>くじ引きアプリ</h1>
 
-  <!-- くじの内容を保存するボタン -->
   <div class="corner-buttons">
-    <button onclick="saveEntries()">保存</button>
-    <button onclick="showPreview()">プレビュー</button>
+    <div>
+      <button onclick="loadData()">読み込み</button>
+      <button onclick="saveData()">保存</button>
+      <button onclick="deleteData()">削除</button>
+    </div>
+    <button onclick="togglePreview()">プレビュー</button>
   </div>
 
-  <!-- プレビューエリア：入力した内容をプレビューします -->
-  <div id="previewArea"></div>
+  <textarea id="input" placeholder="ここに最大30個の候補を入力してください（1行に1つ）"></textarea>
+  <button onclick="confirmEntries()" style="margin-top: 10px;">確認</button>
 
-  <!-- 戻るボタン：プレビューから戻ります -->
-  <button id="backButton" onclick="backToInput()">戻る</button>
-
-  <!-- 抽選ボタンと結果表示エリア -->
-  <div id="drawSection">
-    <button id="drawButton" onclick="drawLottery()">くじを引く</button>
-    <div id="result"></div>
+  <div id="drawSection" class="draw-section hidden">
+    <div id="drawnResult" class="drawn-result"></div>
+    <button class="draw-button" onclick="draw()">くじを引く</button>
+    <div class="corner-buttons" style="justify-content: center; margin-top: 10px;">
+      <button onclick="goBack()">戻る</button>
+    </div>
   </div>
 
-  <!-- 抽選履歴の表示エリア -->
-  <div id="history"></div>
+  <div id="previewList" class="preview hidden"></div>
+  <div id="historyList" class="history hidden"></div>
 
   <script>
-    // ローカルストレージから保存された内容を取得します
-    let savedEntries = [];
+    let entries = [];
+    let drawHistory = [];
 
-    // くじ引きの内容を保存します
-    function saveEntries() {
-      const entries = document.getElementById('inputArea').value.split('\n').map(entry => entry.trim()).filter(entry => entry.length > 0);
-      if (entries.length > 0) {
-        savedEntries = entries;
-        localStorage.setItem('lotteryEntries', JSON.stringify(savedEntries));
-        alert('内容が保存されました!');
-        document.getElementById('drawSection').style.display = 'block'; // 保存後に抽選ボタンを表示
-        showHistory(); // 履歴も表示
-      } else {
-        alert('内容を入力してください');
-      }
-    }
-
-    // プレビュー表示
-    function showPreview() {
-      const previewArea = document.getElementById('previewArea');
-      previewArea.innerHTML = '<ul>' + savedEntries.map((entry, index) => `<li>${index + 1}: ${entry}</li>`).join('') + '</ul>';
-      previewArea.style.display = 'block';
-      document.getElementById('backButton').style.display = 'inline-block';
-      document.getElementById('inputArea').style.display = 'none';
-      document.querySelector('.corner-buttons').style.display = 'none';
-      document.getElementById('drawSection').style.display = 'none'; // プレビュー中は抽選を非表示
-    }
-
-    // 入力に戻る
-    function backToInput() {
-      document.getElementById('previewArea').style.display = 'none';
-      document.getElementById('backButton').style.display = 'none';
-      document.getElementById('inputArea').style.display = 'block';
-      document.querySelector('.corner-buttons').style.display = 'flex';
-      document.getElementById('drawSection').style.display = 'block'; // 入力画面に戻ると抽選ボタンを再表示
-    }
-
-    // くじ引きの結果を表示します
-    function drawLottery() {
-      if (savedEntries.length === 0) {
-        alert('保存された内容がありません');
+    function confirmEntries() {
+      const raw = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
+      entries = raw.slice(0, 30);
+      if (entries.length === 0) {
+        alert("候補がありません。");
         return;
       }
-      const randomIndex = Math.floor(Math.random() * savedEntries.length);
-      const result = savedEntries[randomIndex];
-      document.getElementById('result').innerText = `当選: ${result}`;
-      saveHistory(result); // 履歴に保存
+      drawHistory = [];
+      document.getElementById('input').classList.add('hidden');
+      document.querySelector('button[onclick="confirmEntries()"]').classList.add('hidden');
+      document.getElementById('drawSection').classList.remove('hidden');
+      document.getElementById('historyList').classList.remove('hidden');
+      updateHistory();
     }
 
-    // 抽選履歴を表示
-    function showHistory() {
-      const historyArea = document.getElementById('history');
-      historyArea.innerHTML = '<h3>抽選履歴:</h3>' + savedEntries.map(entry => `<p>${entry}</p>`).join('');
+    function goBack() {
+      document.getElementById('input').classList.remove('hidden');
+      document.querySelector('button[onclick="confirmEntries()"]').classList.remove('hidden');
+      document.getElementById('drawSection').classList.add('hidden');
+      document.getElementById('historyList').classList.add('hidden');
     }
 
-    // 履歴に抽選結果を保存
-    function saveHistory(result) {
-      let history = localStorage.getItem('lotteryHistory');
-      history = history ? JSON.parse(history) : [];
-      history.push(result);
-      localStorage.setItem('lotteryHistory', JSON.stringify(history));
-      showHistory(); // 履歴を更新して表示
+    function draw() {
+      if (entries.length === 0) return;
+      const picked = entries[Math.floor(Math.random() * entries.length)];
+      drawHistory.push(picked);
+      document.getElementById('drawnResult').textContent = "結果: " + picked;
+      updateHistory();
     }
 
-    // ロード時に保存されたデータを読み込む
-    window.onload = function() {
-      const savedData = localStorage.getItem('lotteryEntries');
-      if (savedData) {
-        savedEntries = JSON.parse(savedData);
-        document.getElementById('drawSection').style.display = 'block'; // 保存データがある場合、抽選ボタンを表示
+    function updateHistory() {
+      const historyEl = document.getElementById('historyList');
+      historyEl.innerHTML = "<strong>履歴:</strong><br>" + drawHistory.map((e, i) => `${i + 1}. ${e}`).join("<br>");
+    }
+
+    function saveData() {
+      const raw = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
+      localStorage.setItem('entries', JSON.stringify(raw.slice(0, 30)));
+      localStorage.setItem('history', JSON.stringify(drawHistory));
+      alert("保存しました！");
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem('entries');
+      if (saved) {
+        entries = JSON.parse(saved);
+        document.getElementById('input').value = entries.join('\n');
       }
-      showHistory(); // 履歴の表示
+      const savedHistory = localStorage.getItem('history');
+      if (savedHistory) {
+        drawHistory = JSON.parse(savedHistory);
+        updateHistory();
+        document.getElementById('historyList').classList.remove('hidden');
+      }
+      alert("読み込みました！");
+    }
+
+    function deleteData() {
+      if (confirm("本当に削除しますか？")) {
+        localStorage.removeItem('entries');
+        localStorage.removeItem('history');
+        document.getElementById('input').value = '';
+        entries = [];
+        drawHistory = [];
+        document.getElementById('drawnResult').textContent = '';
+        document.getElementById('historyList').innerHTML = '';
+        alert("削除しました！");
+      }
+    }
+
+    function togglePreview() {
+      const preview = document.getElementById('previewList');
+      if (preview.classList.contains('hidden')) {
+        const list = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
+        preview.innerHTML = "<strong>プレビュー:</strong><br>" + list.map((e, i) => `${i + 1}. ${e} <div class='dotted'></div>`).join("");
+        preview.classList.remove('hidden');
+      } else {
+        preview.classList.add('hidden');
+      }
     }
   </script>
 </body>

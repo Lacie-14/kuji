@@ -1,185 +1,153 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>くじ引きアプリ</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 10px;
-      background: #f5f5f5;
-      box-sizing: border-box;
-    }
-    h1 {
-      font-size: 20px;
-      text-align: center;
-      margin-top: 10px;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      font-size: 14px;
-      padding: 8px;
-      box-sizing: border-box;
-      resize: none;
-    }
-    .corner-buttons {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .corner-buttons button {
-      font-size: 12px;
-      padding: 6px 10px;
-    }
-    .draw-section {
-      text-align: center;
-      margin-top: 20px;
-    }
-    .draw-button {
-      font-size: 24px;
-      padding: 10px 30px;
-      margin-top: 10px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-    .drawn-result {
-      font-size: 20px;
-      margin-top: 20px;
-      color: #d32f2f;
-      font-weight: bold;
-    }
-    .dotted {
-      border-top: 1px dotted #aaa;
-      margin: 5px 0;
-    }
-    .preview, .history {
-      font-size: 14px;
-      background: white;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 4px;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>制限付きくじ引き</title>
+    <style>
+        /* 基本スタイル設定 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f7f7f7;
+            text-align: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 32px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .list-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .list-item {
+            border-bottom: 1px dashed #ccc;
+            padding: 8px 0;
+            font-size: 1rem;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>制限付きくじ引き</h1>
 
-  <h1>くじ引きアプリ</h1>
+        <button id="drawButton">くじを引く</button>
+        <p id="result"></p>
 
-  <div class="corner-buttons">
-    <div>
-      <button onclick="loadData()">読み込み</button>
-      <button onclick="saveData()">保存</button>
-      <button onclick="deleteData()">削除</button>
+        <div class="list-container" id="listContainer">
+            <h3>登録した例文:</h3>
+            <div id="list">
+                <!-- 例文リスト -->
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button id="clearButton">登録内容を消去する</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button id="addExampleButton">例文を追加する</button>
+        </div>
     </div>
-    <button onclick="togglePreview()">プレビュー</button>
-  </div>
 
-  <textarea id="input" placeholder="ここに最大30個の候補を入力してください（1行に1つ）"></textarea>
-  <button onclick="confirmEntries()" style="margin-top: 10px;">確認</button>
+    <script>
+        // 例文リストの配列
+        let examples = [];
 
-  <div id="drawSection" class="draw-section hidden">
-    <div id="drawnResult" class="drawn-result"></div>
-    <button class="draw-button" onclick="draw()">くじを引く</button>
-    <div class="corner-buttons" style="justify-content: center; margin-top: 10px;">
-      <button onclick="goBack()">戻る</button>
-    </div>
-  </div>
+        // ボタンと表示エレメントの取得
+        const drawButton = document.getElementById('drawButton'); // くじ引きボタン
+        const resultElement = document.getElementById('result'); // 結果表示エリア
+        const listContainer = document.getElementById('listContainer'); // 例文リストコンテナ
+        const addExampleButton = document.getElementById('addExampleButton'); // 例文追加ボタン
+        const clearButton = document.getElementById('clearButton'); // 登録内容削除ボタン
 
-  <div id="previewList" class="preview hidden"></div>
-  <div id="historyList" class="history hidden"></div>
+        // 例文を追加する関数
+        function addExample() {
+            const newExample = prompt('例文を入力してください:'); // ユーザーに例文を入力させる
+            if (newExample) {
+                examples.push(newExample); // 例文を配列に追加
+                updateExampleList(); // 例文リストを更新
+            }
+        }
 
-  <script>
-    let entries = [];
-    let drawHistory = [];
+        // 例文リストを更新する関数
+        function updateExampleList() {
+            const listDiv = document.getElementById('list'); // リストを表示する要素を取得
+            listDiv.innerHTML = ''; // 既存のリストをクリア
+            examples.forEach((example, index) => {
+                const listItem = document.createElement('div'); // 新しいリスト項目を作成
+                listItem.classList.add('list-item'); // CSSクラスを追加
+                listItem.textContent = `${index + 1}. ${example}`; // 番号と例文を表示
+                listDiv.appendChild(listItem); // リストに追加
+            });
+        }
 
-    function confirmEntries() {
-      const raw = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
-      entries = raw.slice(0, 30);
-      if (entries.length === 0) {
-        alert("候補がありません。");
-        return;
-      }
-      drawHistory = [];
-      document.getElementById('input').classList.add('hidden');
-      document.querySelector('button[onclick="confirmEntries()"]').classList.add('hidden');
-      document.getElementById('drawSection').classList.remove('hidden');
-      document.getElementById('historyList').classList.remove('hidden');
-      updateHistory();
-    }
+        // くじを引くボタンのクリックイベント
+        drawButton.addEventListener('click', () => {
+            if (examples.length === 0) {
+                resultElement.textContent = '例文を追加してください。'; // 例文がない場合、警告メッセージ
+            } else {
+                const randomIndex = Math.floor(Math.random() * examples.length); // ランダムに例文を選ぶ
+                const selectedExample = examples[randomIndex]; // 選ばれた例文
+                resultElement.textContent = `選ばれた例文: ${selectedExample}`; // 結果を表示
+            }
+        });
 
-    function goBack() {
-      document.getElementById('input').classList.remove('hidden');
-      document.querySelector('button[onclick="confirmEntries()"]').classList.remove('hidden');
-      document.getElementById('drawSection').classList.add('hidden');
-      document.getElementById('historyList').classList.add('hidden');
-    }
+        // 登録内容を削除するボタンのクリックイベント
+        clearButton.addEventListener('click', () => {
+            if (confirm('本当に登録内容を削除しますか？')) { // 削除の確認ダイアログ
+                examples = []; // 例文リストを空にする
+                updateExampleList(); // リストを更新
+                resultElement.textContent = ''; // 結果表示エリアをクリア
+            }
+        });
 
-    function draw() {
-      if (entries.length === 0) return;
-      const picked = entries[Math.floor(Math.random() * entries.length)];
-      drawHistory.push(picked);
-      document.getElementById('drawnResult').textContent = "結果: " + picked;
-      updateHistory();
-    }
-
-    function updateHistory() {
-      const historyEl = document.getElementById('historyList');
-      historyEl.innerHTML = "<strong>履歴:</strong><br>" + drawHistory.map((e, i) => `${i + 1}. ${e}`).join("<br>");
-    }
-
-    function saveData() {
-      const raw = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
-      localStorage.setItem('entries', JSON.stringify(raw.slice(0, 30)));
-      localStorage.setItem('history', JSON.stringify(drawHistory));
-      alert("保存しました！");
-    }
-
-    function loadData() {
-      const saved = localStorage.getItem('entries');
-      if (saved) {
-        entries = JSON.parse(saved);
-        document.getElementById('input').value = entries.join('\n');
-      }
-      const savedHistory = localStorage.getItem('history');
-      if (savedHistory) {
-        drawHistory = JSON.parse(savedHistory);
-        updateHistory();
-        document.getElementById('historyList').classList.remove('hidden');
-      }
-      alert("読み込みました！");
-    }
-
-    function deleteData() {
-      if (confirm("本当に削除しますか？")) {
-        localStorage.removeItem('entries');
-        localStorage.removeItem('history');
-        document.getElementById('input').value = '';
-        entries = [];
-        drawHistory = [];
-        document.getElementById('drawnResult').textContent = '';
-        document.getElementById('historyList').innerHTML = '';
-        alert("削除しました！");
-      }
-    }
-
-    function togglePreview() {
-      const preview = document.getElementById('previewList');
-      if (preview.classList.contains('hidden')) {
-        const list = document.getElementById('input').value.trim().split('\n').filter(e => e.trim());
-        preview.innerHTML = "<strong>プレビュー:</strong><br>" + list.map((e, i) => `${i + 1}. ${e} <div class='dotted'></div>`).join("");
-        preview.classList.remove('hidden');
-      } else {
-        preview.classList.add('hidden');
-      }
-    }
-  </script>
+        // 例文追加ボタンのクリックイベント
+        addExampleButton.addEventListener('click', addExample); // 例文追加関数を呼び出す
+    </script>
 </body>
 </html>
